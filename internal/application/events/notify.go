@@ -1,6 +1,7 @@
 package events
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -29,7 +30,10 @@ func (w WebhookSender) Send(ctx context.Context, s subscription.Subscription, e 
 	}
 	var last error
 	for i := 0; i < attempts; i++ {
-		req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, s.URL, bytesReader(body))
+		if err := ctx.Err(); err != nil {
+			return fmt.Errorf("webhook send cancelled for %s: %w", s.ID, err)
+		}
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, s.URL, bytes.NewReader(body))
 		if err != nil {
 			return err
 		}
@@ -46,22 +50,14 @@ func (w WebhookSender) Send(ctx context.Context, s subscription.Subscription, e 
 		if last == nil {
 			last = fmt.Errorf("webhook status %d", resp.StatusCode)
 		}
-		time.Sleep(time.Duration(i+1) * 50 * time.Millisecond)
+		if i < attempts-1 {
+			select {
+			case <-ctx.Done():
+				return fmt.Errorf("webhook retry cancelled for %s: %w", s.ID, ctx.Err())
+			case <-time.After(time.Duration(i+1) * 50 * time.Millisecond):
+			}
+		}
 	}
 	return last
 }
-func bytesReader(v []byte) *byteBuffer { return &byteBuffer{value: v} }
 
-type byteBuffer struct {
-	value []byte
-	pos   int
-}
-
-func (b *byteBuffer) Read(p []byte) (int, error) {
-	if b.pos >= len(b.value) {
-		return 0, fmt.Errorf("eof")
-	}
-	n := copy(p, b.value[b.pos:])
-	b.pos += n
-	return n, nil
-}

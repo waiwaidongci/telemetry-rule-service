@@ -27,6 +27,9 @@ func (q *Memory) Publish(ctx context.Context, m Message) error {
 }
 func (q *Memory) Consume(ctx context.Context, fn func(context.Context, Message) error) error {
 	for {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
 		q.mu.Lock()
 		if len(q.messages) > 0 {
 			m := q.messages[0]

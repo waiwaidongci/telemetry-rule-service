@@ -50,13 +50,20 @@ func (c *RetryingConsumer) Handle(ctx context.Context, value Message, handler fu
 	}
 	var last error
 	for attempt := 1; attempt <= maximum; attempt++ {
-		if err := handler(context.Background(), value); err == nil {
+		if err := ctx.Err(); err != nil {
+			return fmt.Errorf("retry cancelled for message %s: %w", value.Key, err)
+		}
+		if err := handler(ctx, value); err == nil {
 			return nil
 		} else {
 			last = err
 		}
 		if attempt < maximum {
-			time.Sleep(c.Policy.Delay(attempt))
+			select {
+			case <-ctx.Done():
+				return fmt.Errorf("retry cancelled for message %s: %w", value.Key, ctx.Err())
+			case <-time.After(c.Policy.Delay(attempt)):
+			}
 		}
 	}
 	c.mu.Lock()

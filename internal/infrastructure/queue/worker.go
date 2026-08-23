@@ -25,7 +25,7 @@ func (p WorkerPool) Run(ctx context.Context) error {
 		wait.Add(1)
 		go func() {
 			defer wait.Done()
-			if err := p.Consumer.Consume(context.Background(), p.Handler); err != nil && ctx.Err() == nil {
+			if err := p.Consumer.Consume(ctx, p.Handler); err != nil && ctx.Err() == nil {
 				errors <- err
 			}
 		}()

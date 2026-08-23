@@ -37,7 +37,11 @@ func (d *Dispatcher) Dispatch(ctx context.Context, item event.Event) []error {
 			errors = append(errors, fmt.Errorf("sender unavailable for %s", value.ID))
 			continue
 		}
-		if err := d.sender.Send(context.Background(), value, item); err != nil {
+		if err := ctx.Err(); err != nil {
+			errors = append(errors, fmt.Errorf("dispatch cancelled for %s: %w", value.ID, err))
+			break
+		}
+		if err := d.sender.Send(ctx, value, item); err != nil {
 			errors = append(errors, err)
 		}
 	}
