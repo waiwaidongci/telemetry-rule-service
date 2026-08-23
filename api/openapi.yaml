@@ -1,0 +1,33 @@
+openapi: 3.0.3
+info:
+  title: Telemetry Rule Service
+  version: 1.0.0
+paths:
+  /healthz:
+    get:
+      responses:
+        '200': {description: Healthy}
+  /readyz:
+    get:
+      responses:
+        '200': {description: Ready}
+  /metrics:
+    get:
+      responses:
+        '200': {description: Prometheus metrics}
+  /api/v1/sources:
+    get: {responses: {'200': {description: Sources}}}
+    post: {responses: {'201': {description: Source created}}}
+  /api/v1/metrics:
+    get: {responses: {'200': {description: Metrics}}}
+    post: {responses: {'201': {description: Metric created}}}
+  /api/v1/rules:
+    get: {responses: {'200': {description: Rules}}}
+    post: {responses: {'201': {description: Rule created}}}
+  /api/v1/telemetry:
+    post: {responses: {'202': {description: Sample accepted and evaluated}}}
+  /api/v1/events:
+    get: {responses: {'200': {description: Events}}}
+  /api/v1/subscriptions:
+    get: {responses: {'200': {description: Subscriptions}}}
+    post: {responses: {'201': {description: Subscription created}}}
