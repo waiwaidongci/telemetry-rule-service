@@ -27,8 +27,7 @@ func (s *Service) IngestJSON(ctx context.Context, body []byte) (metric.Sample, e
 	if err := v.Validate(); err != nil {
 		return v, err
 	}
-	detached := context.Background()
-	if err := s.repo.Record(detached, v); err != nil {
+	if err := s.repo.Record(ctx, v); err != nil {
 		return v, fmt.Errorf("record sample: %w", err)
 	}
 	return v, nil

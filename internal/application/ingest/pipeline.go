@@ -25,8 +25,10 @@ func (p *Pipeline) Process(ctx context.Context, value metric.Sample) error {
 	if p.dedup != nil && !p.dedup.Accept(value, time.Now().UTC()) {
 		return fmt.Errorf("duplicate sample")
 	}
-	detached := context.Background()
-	if err := p.service.repo.Record(detached, value); err != nil {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if err := p.service.repo.Record(ctx, value); err != nil {
 		return fmt.Errorf("persist sample: %w", err)
 	}
 	return nil
@@ -35,6 +37,9 @@ func (p *Pipeline) Process(ctx context.Context, value metric.Sample) error {
 func (p *Pipeline) ProcessMany(ctx context.Context, values []metric.Sample) (BatchResult, error) {
 	result := BatchResult{}
 	for index, value := range values {
+		if err := ctx.Err(); err != nil {
+			return result, err
+		}
 		if err := p.Process(ctx, value); err != nil {
 			result.Rejected++
 			result.Errors = append(result.Errors, fmt.Sprintf("%d: %v", index, err))

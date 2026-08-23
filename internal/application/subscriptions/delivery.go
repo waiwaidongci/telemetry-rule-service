@@ -20,8 +20,10 @@ func Deliver(ctx context.Context, s subscription.Subscription, e event.Event, se
 	Send(context.Context, subscription.Subscription, event.Event) error
 }) (Delivery, error) {
 	result := Delivery{SubscriptionID: s.ID, EventID: e.ID, Attempt: 1}
-	detached := context.Background()
-	if err := sender.Send(detached, s, e); err != nil {
+	if err := ctx.Err(); err != nil {
+		return result, err
+	}
+	if err := sender.Send(ctx, s, e); err != nil {
 		result.Error = err.Error()
 		return result, fmt.Errorf("deliver event: %w", err)
 	}

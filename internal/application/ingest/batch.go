@@ -15,14 +15,16 @@ type BatchResult struct {
 func (s *Service) IngestBatch(ctx context.Context, values []metric.Sample) (BatchResult, error) {
 	result := BatchResult{}
 	for i, value := range values {
+		if err := ctx.Err(); err != nil {
+			return result, err
+		}
 		value = Normalize(value)
 		if err := value.Validate(); err != nil {
 			result.Rejected++
 			result.Errors = append(result.Errors, fmt.Sprintf("%d: %v", i, err))
 			continue
 		}
-		detached := context.Background()
-		if err := s.repo.Record(detached, value); err != nil {
+		if err := s.repo.Record(ctx, value); err != nil {
 			return result, fmt.Errorf("record batch item %d: %w", i, err)
 		}
 		result.Accepted++
