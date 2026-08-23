@@ -30,6 +30,8 @@ func NewRateLimiter(rate, burst int) *RateLimiter {
 }
 
 func (l *RateLimiter) Allow(key string, now time.Time) bool {
+	l.mu.Lock()
+	defer l.mu.Unlock()
 	value, exists := l.buckets[key]
 	if !exists {
 		l.buckets[key] = bucket{available: l.burst - 1, updated: now}

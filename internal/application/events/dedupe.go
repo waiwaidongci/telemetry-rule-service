@@ -23,6 +23,8 @@ func (d *Deduplicator) Seen(e event.Event, now time.Time) bool {
 		now = time.Now().UTC()
 	}
 	key := event.GroupKey(e)
+	d.mu.Lock()
+	defer d.mu.Unlock()
 	at, ok := d.items[key]
 	if ok && now.Sub(at) < d.TTL {
 		return true

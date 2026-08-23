@@ -3,9 +3,11 @@ package protocol
 import (
 	"fmt"
 	"strings"
+	"sync"
 )
 
 type Registry struct {
+	mu       sync.RWMutex
 	decoders map[string]Decoder
 }
 
@@ -21,11 +23,15 @@ func (r *Registry) Register(contentType string, decoder Decoder) {
 	if contentType == "" || decoder == nil {
 		return
 	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	r.decoders[contentType] = decoder
 }
 
 func (r *Registry) Decoder(contentType string) (Decoder, error) {
 	contentType = normalizeContentType(contentType)
+	r.mu.RLock()
+	defer r.mu.RUnlock()
 	decoder, exists := r.decoders[contentType]
 	if !exists {
 		return nil, fmt.Errorf("unsupported content type %q", contentType)
@@ -46,6 +52,8 @@ func (r *Registry) Decode(contentType string, body []byte) (interface{}, error) 
 }
 
 func (r *Registry) Supported() []string {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
 	result := make([]string, 0, len(r.decoders))
 	for value := range r.decoders {
 		result = append(result, value)

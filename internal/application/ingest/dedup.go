@@ -29,6 +29,8 @@ func (d *Dedup) Accept(v metric.Sample, now time.Time) bool {
 		now = time.Now().UTC()
 	}
 	key := d.Key(v)
+	d.mu.Lock()
+	defer d.mu.Unlock()
 	if at, ok := d.seen[key]; ok && now.Sub(at) < d.TTL {
 		return false
 	}
