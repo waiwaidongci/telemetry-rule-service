@@ -1,0 +1,11 @@
+CREATE TABLE data_sources (id text PRIMARY KEY, name text NOT NULL, protocol text NOT NULL, enabled boolean NOT NULL, tags jsonb NOT NULL DEFAULT '{}', created_at timestamptz NOT NULL);
+CREATE TABLE metric_definitions (id text PRIMARY KEY, name text NOT NULL, unit text, enabled boolean NOT NULL, created_at timestamptz NOT NULL);
+CREATE TABLE metric_samples (id text PRIMARY KEY, source_id text NOT NULL REFERENCES data_sources(id), metric_id text NOT NULL REFERENCES metric_definitions(id), value double precision NOT NULL, observed_at timestamptz NOT NULL, tags jsonb NOT NULL DEFAULT '{}');
+CREATE INDEX metric_samples_metric_time ON metric_samples(metric_id, observed_at DESC);
+CREATE INDEX metric_samples_source_time ON metric_samples(source_id, observed_at DESC);
+CREATE TABLE rules (id text PRIMARY KEY, name text NOT NULL, metric_id text NOT NULL REFERENCES metric_definitions(id), type text NOT NULL, operator text, threshold double precision, window_seconds integer NOT NULL, consecutive_count integer NOT NULL DEFAULT 0, enabled boolean NOT NULL, version integer NOT NULL, created_at timestamptz NOT NULL);
+CREATE TABLE window_states (rule_id text NOT NULL REFERENCES rules(id), source_id text NOT NULL, state jsonb NOT NULL, updated_at timestamptz NOT NULL, PRIMARY KEY(rule_id, source_id));
+CREATE TABLE anomaly_events (id text PRIMARY KEY, rule_id text NOT NULL REFERENCES rules(id), source_id text NOT NULL, metric_id text NOT NULL, message text NOT NULL, value double precision NOT NULL, status text NOT NULL, first_seen timestamptz NOT NULL, last_seen timestamptz NOT NULL, occurrence_count integer NOT NULL);
+CREATE INDEX anomaly_events_status_time ON anomaly_events(status, last_seen DESC);
+CREATE TABLE subscriptions (id text PRIMARY KEY, name text NOT NULL, url text NOT NULL, event_types text[] NOT NULL DEFAULT '{}', enabled boolean NOT NULL, created_at timestamptz NOT NULL);
+CREATE TABLE delivery_attempts (id text PRIMARY KEY, subscription_id text NOT NULL REFERENCES subscriptions(id), event_id text NOT NULL REFERENCES anomaly_events(id), status text NOT NULL, attempt integer NOT NULL, error text, created_at timestamptz NOT NULL);
